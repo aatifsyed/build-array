@@ -1,9 +1,38 @@
+//! Build an array dynamically without heap allocations, deferring errors to a
+//! single `build` callsite.
+//!
+//! ```
+//! # use array_builder::ArrayBuilder;
+//! let arr: [u8; 3] = ArrayBuilder::new()
+//!     .push(1)
+//!     .push(2)
+//!     .push(3)
+//!     .build_exact()
+//!     .unwrap();
+//!
+//! assert_eq!(arr, [1, 2, 3]);
+//! ```
+//!
+//! You can choose how to handle the wrong number of [`push`](ArrayBuilder::push)
+//! calls:
+//! - [build_exact](ArrayBuilder::build_exact).
+//! - [build_pad](ArrayBuilder::build_pad).
+//! - [build_pad_truncate](ArrayBuilder::build_pad_truncate).
+//!
+//! # Comparison with other libraries
+//! - [arrayvec] requires you to handle over-provision at each call to [`try_push`](arrayvec::ArrayVec::try_push).
+//! - [array_builder](https://docs.rs/array_builder/latest/array_builder/) will
+//!   [`panic!`] on over-provision.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::fmt;
 
 use arrayvec::ArrayVec;
 
+/// Build an array dynamically without heap allocations.
+///
+/// See [module documentation](mod@self) for more.
 #[derive(Debug, Clone, Default)]
 pub struct ArrayBuilder<T, const N: usize> {
     inner: arrayvec::ArrayVec<T, N>,
@@ -11,6 +40,7 @@ pub struct ArrayBuilder<T, const N: usize> {
 }
 
 impl<T, const N: usize> ArrayBuilder<T, N> {
+    /// Create a new, empty builder.
     pub const fn new() -> Self {
         Self {
             inner: ArrayVec::new_const(),
@@ -98,6 +128,33 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
                 actual: self.inner.len() + self.excess,
             }))
         }
+    }
+    /// Return the current collection of items in the array.
+    ///
+    /// Does not include excess items.
+    pub fn as_slice(&self) -> &[T] {
+        self.inner.as_slice()
+    }
+    /// Return the current collection of items in the array.
+    ///
+    /// Does not include excess items.
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        self.inner.as_mut_slice()
+    }
+}
+
+impl<T, const N: usize> Extend<T> for ArrayBuilder<T, N> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for it in iter {
+            self.push(it);
+        }
+    }
+}
+impl<T, const N: usize> FromIterator<T> for ArrayBuilder<T, N> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut this = Self::new();
+        this.extend(iter);
+        this
     }
 }
 
