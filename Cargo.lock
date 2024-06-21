@@ -3,14 +3,14 @@
 version = 3
 
 [[package]]
-name = "array-builder"
-version = "0.1.0"
-dependencies = [
- "arrayvec",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
+
+[[package]]
+name = "build-array"
+version = "0.1.0"
+dependencies = [
+ "arrayvec",
+]

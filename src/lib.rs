@@ -2,7 +2,7 @@
 //! single `build` callsite.
 //!
 //! ```
-//! # use array_builder::ArrayBuilder;
+//! # use build_array::ArrayBuilder;
 //! let arr: [u8; 3] = ArrayBuilder::new()
 //!     .push(1)
 //!     .push(2)
@@ -29,6 +29,18 @@
 use core::fmt;
 
 use arrayvec::ArrayVec;
+
+/// Shorthand for [`ArrayBuilder::new`].
+///
+/// ```
+/// # let arr: [&str; 0] =
+/// build_array::new()
+///     .push("hello")
+///     .build_pad_truncate("pad");
+/// ```
+pub const fn new<T, const N: usize>() -> ArrayBuilder<T, N> {
+    ArrayBuilder::new()
+}
 
 /// Build an array dynamically without heap allocations.
 ///
@@ -65,7 +77,7 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
     /// The builder remains unchanged in the [`Err`] case.
     ///
     /// ```
-    /// # use array_builder::ArrayBuilder;
+    /// # use build_array::ArrayBuilder;
     /// let arr = ArrayBuilder::<_, 3>::new().push("first").build_pad("padding").unwrap();
     /// assert_eq!(arr, ["first", "padding", "padding"]);
     ///
@@ -88,7 +100,7 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
     /// The builder is restored to an empty state.
     ///
     /// ```
-    /// # use array_builder::ArrayBuilder;
+    /// # use build_array::ArrayBuilder;
     /// let arr = ArrayBuilder::<_, 3>::new().push("first").build_pad_truncate("padding");
     /// assert_eq!(arr, ["first", "padding", "padding"]);
     ///
@@ -110,7 +122,7 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
     /// Require exactly `N` calls to [`Self::push`].
     /// The builder remains unchanged in the [`Err`] case.
     /// ```
-    /// # use array_builder::ArrayBuilder;
+    /// # use build_array::ArrayBuilder;
     ///
     /// ArrayBuilder::<_, 2>::new().push("too few").build_exact().unwrap_err();
     /// ArrayBuilder::<_, 2>::new().push("way").push("too").push("many").build_exact().unwrap_err();
