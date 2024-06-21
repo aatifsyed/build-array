@@ -45,7 +45,7 @@ pub const fn new<T, const N: usize>() -> ArrayBuilder<T, N> {
 /// Build an array dynamically without heap allocations.
 ///
 /// See [module documentation](mod@self) for more.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ArrayBuilder<T, const N: usize> {
     inner: arrayvec::ArrayVec<T, N>,
     excess: usize,
