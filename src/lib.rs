@@ -17,6 +17,7 @@
 //! calls:
 //! - [`build_exact`](ArrayBuilder::build_exact).
 //! - [`build_pad`](ArrayBuilder::build_pad).
+//! - [`build_truncate`](ArrayBuilder::build_truncate).
 //! - [`build_pad_truncate`](ArrayBuilder::build_pad_truncate).
 //!
 //! # Comparison with other libraries
@@ -73,6 +74,12 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
             self.inner.push(f())
         }
     }
+    fn error(&self) -> Error {
+        Error {
+            expected: N,
+            actual: self.inner.len() + self.excess,
+        }
+    }
     /// Pad out the array, returning an [`Err`] if there were too many calls to [`Self::push`].
     /// The builder remains unchanged in the [`Err`] case.
     ///
@@ -88,7 +95,7 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
         T: Clone,
     {
         if self.excess > 0 {
-            return Err(Error(ErrorInner::TooMany(self.excess)));
+            return Err(self.error());
         }
         self.pad_with(|| item.clone());
         match self.inner.take().into_inner() {
@@ -119,6 +126,27 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
             Err(_) => unreachable!("we've just padded"),
         }
     }
+    /// Build the array, ignoring if there were too many calls to [`Self::push`].
+    /// The builder is restored to an empty state, and remains unchanged in the
+    /// [`Err`] case.
+    ///
+    /// ```
+    /// # use build_array::ArrayBuilder;
+    /// let arr = ArrayBuilder::<_, 1>::new().push("first").push("ignored").build_truncate().unwrap();
+    /// assert_eq!(arr, ["first"]);
+    ///
+    /// ArrayBuilder::<&str, 1>::new().build_truncate().unwrap_err();
+    /// ```
+    pub fn build_truncate(&mut self) -> Result<[T; N], Error> {
+        match self.inner.remaining_capacity() == 0 {
+            true => match self.inner.take().into_inner() {
+                Ok(it) => Ok(it),
+                Err(_) => unreachable!("we've just checked the capacity"),
+            },
+            false => Err(self.error()),
+        }
+    }
+
     /// Require exactly `N` calls to [`Self::push`].
     /// The builder remains unchanged in the [`Err`] case.
     /// ```
@@ -135,10 +163,7 @@ impl<T, const N: usize> ArrayBuilder<T, N> {
                 Err(_) => unreachable!("remaining capacity is zero"),
             }
         } else {
-            Err(Error(ErrorInner::WrongNumber {
-                expected: N,
-                actual: self.inner.len() + self.excess,
-            }))
+            Err(self.error())
         }
     }
     /// Return the current collection of items in the array.
@@ -172,25 +197,22 @@ impl<T, const N: usize> FromIterator<T> for ArrayBuilder<T, N> {
 
 /// Error when building an array from [`ArrayBuilder`].
 #[derive(Debug, Clone)]
-pub struct Error(ErrorInner);
-
-#[derive(Debug, Clone)]
-enum ErrorInner {
-    TooMany(usize),
-    WrongNumber { expected: usize, actual: usize },
+pub struct Error {
+    expected: usize,
+    actual: usize,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {
-            ErrorInner::TooMany(excess) => {
-                f.write_fmt(format_args!("too many elements, excess: {}", excess))
-            }
-            ErrorInner::WrongNumber { expected, actual } => f.write_fmt(format_args!(
-                "wrong number of elements, expected {}, got {}",
-                expected, actual
-            )),
-        }
+        let Self { expected, actual } = self;
+        let snip = match actual < expected {
+            true => "few",
+            false => "many",
+        };
+        f.write_fmt(format_args!(
+            "too {} elements for array, needed {} but got {}",
+            snip, expected, actual
+        ))
     }
 }
 
