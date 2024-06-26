@@ -18,6 +18,7 @@ You can choose how to handle the wrong number of [`push`](ArrayBuilder::push)
 calls:
 - [`build_exact`](ArrayBuilder::build_exact).
 - [`build_pad`](ArrayBuilder::build_pad).
+- [`build_truncate`](ArrayBuilder::build_truncate).
 - [`build_pad_truncate`](ArrayBuilder::build_pad_truncate).
 
 # Comparison with other libraries
